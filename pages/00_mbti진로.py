@@ -1,4 +1,4 @@
-//import streamlit as st
+import streamlit as st
 
 # 페이지 기본 설정
 st.set_page_config(page_title="✨ MBTI 맞춤 진로 탐색기", page_icon="🎯", layout="centered")
