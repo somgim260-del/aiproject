@@ -63,18 +63,16 @@ mbti_recommendations = {
             {"title": "매드 맥스: 분노의 도로", "year": "2015년", "desc": "쉴 틈 없이 몰아치는 압도적인 스릴과 액션의 정수! 🔥"}
         ]
     },
-    "ISFP": [
-        {
-            "books": [
-                {"title": "구름빵", "author": "백희나 (2004)", "desc": "아기자기한 감성과 따뜻한 시각적 예술미가 담긴 그림책! ☁️"},
-                {"title": "지구에서 한아뿐", "author": "정세랑 (2019)", "desc": "우주를 건너온 독특하고 감성 넘치는 로맨스 소설! 🪐"}
-            ],
-            "movies": [
-                {"title": "코코", "year": "2017년", "desc": "눈물이 핑 도는 아름다운 음악과 감성 충만한 사후세계 이야기! 🎸"},
-                {"title": "라라랜드", "year": "2016년", "desc": "환상적인 색감과 음악, 예술적 감성이 가득한 로맨스 영화! 🎹"}
-            ]
-        }
-    ]["ISFP"], # Temporary layout fix structure below cleanly
+    "ISFP": {
+        "books": [
+            {"title": "구름빵", "author": "백희나 (2004)", "desc": "아기자기한 감성과 따뜻한 시각적 예술미가 담긴 그림책! ☁️"},
+            {"title": "지구에서 한아뿐", "author": "정세랑 (2019)", "desc": "우주를 건너온 독특하고 감성 넘치는 로맨스 소설! 🪐"}
+        ],
+        "movies": [
+            {"title": "코코", "year": "2017년", "desc": "눈물이 핑 도는 아름다운 음악과 감성 충만한 사후세계 이야기! 🎸"},
+            {"title": "라라랜드", "year": "2016년", "desc": "환상적인 색감과 음악, 예술적 감성이 가득한 로맨스 영화! 🎹"}
+        ]
+    },
     "INFP": {
         "books": [
             {"title": "체리 레몬 마켓", "author": "소목임 (2023)", "desc": "몽환적이고 감성적인 분위기 속에서 위로를 얻는 청춘 소설! 🍒"},
@@ -175,24 +173,6 @@ mbti_recommendations = {
             {"title": "소셜 네트워크", "year": "2010년", "desc": "거대한 비전을 품고 세계적인 플랫폼을 창업하는 야심 찬 청년들의 이야기! 💻"}
         ]
     }
-}
-
-# Fix for ISFP structure key safety check if needed
-if "ISFP" in mbti_recommendations and isinstance(mbti_recommendations["ISFP"], list):
-    # Just in case dict syntax had a glitch above, let's fix it properly in place or ensure clean structure.
-    # Actually, let's make sure ISFP is a proper dict.
-    pass
-
-# Clean data assignment for ISFP to avoid any potential structural glitch:
-mbti_recommendations["ISFP"] = {
-    "books": [
-        {"title": "구름빵", "author": "백희나 (2004)", "desc": "아기자기한 감성과 따뜻한 시각적 예술미가 담긴 그림책! ☁️"},
-        {"title": "지구에서 한아뿐", "author": "정세랑 (2019)", "desc": "우주를 건너온 독특하고 감성 넘치는 로맨스 소설! 🪐"}
-    ],
-    "movies": [
-        {"title": "코코", "year": "2017년", "desc": "눈물이 핑 도는 아름다운 음악과 감성 충만한 사후세계 이야기! 🎸"},
-        {"title": "라라랜드", "year": "2016년", "desc": "환상적인 색감과 음악, 예술적 감성이 가득한 로맨스 영화! 🎹"}
-    ]
 }
 
 # MBTI 선택 드롭다운
