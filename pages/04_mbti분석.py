@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -9,10 +10,14 @@ st.set_page_config(
     layout="wide"
 )
 
-# 데이터 로드 (Streamlit Cloud 호스팅 시 파일 경로 유지)
+# 데이터 로드 (상위 폴더의 CSV 파일 참조)
 @st.cache_data
 def load_data():
-    df = pd.read_csv("countriesMBTI_16types.csv")
+    # 현재 파일(app.py)의 디렉토리 기준으로 상위 폴더 경로 설정
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(current_dir, "..", "countriesMBTI_16types.csv")
+    
+    df = pd.read_csv(file_path)
     return df
 
 df = load_data()
@@ -42,7 +47,6 @@ if selected_country:
     # ----------------------------------------------------
     # 색상 할당: 1위는 빨간색, 2~16위는 파란색 그라데이션
     # ----------------------------------------------------
-    # 파란색 계열 그라데이션 색상표 (진한 파랑 -> 옅은 파랑 15개)
     blue_gradient = [
         "#1E3A8A", "#1D4ED8", "#2563EB", "#3B82F6", "#60A5FA",
         "#6B7280", "#7C3AED", "#6366F1", "#4F46E5", "#4338CA",
