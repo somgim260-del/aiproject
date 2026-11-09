@@ -5,78 +5,67 @@ import plotly.express as px
 
 # 스트림릿 페이지 설정
 st.set_page_config(
-    page_title="국가별 MBTI 비율 분석",
-    page_icon="🌍",
+    page_title="MBTI별 국가 순위 분석",
+    page_icon="🏆",
     layout="wide"
 )
 
 # 데이터 로드 (상위 폴더의 CSV 파일 참조)
 @st.cache_data
 def load_data():
-    # 현재 파일(app.py)의 디렉토리 기준으로 상위 폴더 경로 설정
     current_dir = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(current_dir, "..", "countriesMBTI_16types.csv")
-    
     df = pd.read_csv(file_path)
     return df
 
 df = load_data()
 
-st.title("🌍 국가별 MBTI 비율 시각화")
-st.write("국가를 선택하면 16가지 MBTI 유형의 비율을 막대그래프로 확인할 수 있습니다.")
+st.title("🏆 MBTI 유형별 전 세계 국가 순위")
+st.write("원하는 MBTI 유형을 선택하면, 해당 비율이 높은 국가부터 낮은 국가까지 순서대로 막대그래프로 보여줍니다.")
 
-# 국가 선택 드롭다운 (기본값: South Korea 또는 첫 번째 국가)
-default_idx = 0
-if "South Korea" in df["Country"].values:
-    default_idx = int(df[df["Country"] == "South Korea"].index[0])
+# MBTI 16가지 유형 리스트
+mbti_columns = [
+    'INFJ', 'ISFJ', 'INTP', 'ISFP', 'ENTP', 'INFP', 'ENTJ', 'ISTP',
+    'INTJ', 'ESFP', 'ESTJ', 'ENFP', 'ESTP', 'ISTJ', 'ENFJ', 'ESFJ'
+]
 
-selected_country = st.selectbox(
-    "국가를 선택하세요:",
-    options=df["Country"].unique(),
-    index=default_idx
-)
+# 화면 레이아웃 구성 (선택 박스 및 슬라이더)
+col1, col2 = st.columns([1, 1])
+with col1:
+    selected_mbti = st.selectbox("조회할 MBTI 유형을 선택하세요:", options=mbti_columns, index=0)
+with col2:
+    top_n = st.slider("표시할 상위 국가 수:", min_value=5, max_value=len(df), value=20)
 
-if selected_country:
-    # 선택된 국가 데이터 추출
-    country_data = df[df["Country"] == selected_country].drop(columns=["Country"]).iloc[0]
+if selected_mbti:
+    # 선택된 MBTI 기준으로 내림차순 정렬 (높은 나라 -> 낮은 나라)
+    sorted_df = df[['Country', selected_mbti]].sort_values(by=selected_mbti, ascending=False).head(top_n)
+    sorted_df.columns = ["Country", "Ratio"]
     
-    # 비율 기준 내림차순 정렬
-    sorted_mbti = country_data.sort_values(ascending=False).reset_index()
-    sorted_mbti.columns = ["MBTI", "Ratio"]
-    
-    # ----------------------------------------------------
-    # 색상 할당: 1위는 빨간색, 2~16위는 파란색 그라데이션
-    # ----------------------------------------------------
-    blue_gradient = [
-        "#1E3A8A", "#1D4ED8", "#2563EB", "#3B82F6", "#60A5FA",
-        "#6B7280", "#7C3AED", "#6366F1", "#4F46E5", "#4338CA",
-        "#3730A3", "#312E81", "#60A5FA", "#93C5FD", "#BFDBFE"
-    ]
-    
-    # 1위: Red (#E63946), 나머지 15개: 파란색 그라데이션
-    color_discrete_sequence = ["#E63946"] + blue_gradient[:15]
-    
-    # Plotly 막대그래프 생성
+    # Plotly 막대그래프 생성 (세련된 퍼플 그라데이션 컬러 적용)
     fig = px.bar(
-        sorted_mbti,
-        x="MBTI",
+        sorted_df,
+        x="Country",
         y="Ratio",
-        color="MBTI",
-        color_discrete_sequence=color_discrete_sequence,
-        title=f"📊 {selected_country}의 MBTI 비율 분포 (1위 강조 및 순위별 색상)",
+        color="Ratio",
+        color_continuous_scale="Purples",
+        title=f"📊 '{selected_mbti}' 비율이 높은 상위 {top_n}개 국가 순위",
         text_auto=".2%"
     )
     
     fig.update_layout(
-        xaxis_title="MBTI 유형",
+        xaxis_title="국가",
         yaxis_title="비율",
         yaxis_tickformat=".1%",
-        showlegend=False,
-        height=550
+        xaxis_tickangle=-45,
+        height=600,
+        coloraxis_showscale=False
     )
     
     st.plotly_chart(fig, use_container_width=True)
 
-    # 세부 데이터 표 출력
-    with st.expander("📄 데이터 상세 보기"):
-        st.dataframe(sorted_mbti.style.format({"Ratio": "{:.2%}"}), use_container_width=True)
+    # 세부 데이터 표 출력 (전체 순위 확인 가능)
+    with st.expander("📄 전체 국가 순위 데이터 상세 보기"):
+        full_sorted_df = df[['Country', selected_mbti]].sort_values(by=selected_mbti, ascending=False).reset_index(drop=True)
+        full_sorted_df.columns = ["Country", "Ratio"]
+        full_sorted_df.index = full_sorted_df.index + 1
+        st.dataframe(full_sorted_df.style.format({"Ratio": "{:.2%}"}), use_container_width=True)
