@@ -4,4 +4,3 @@ streamlit-folium
 pandas
 plotly
 matplotlib
-koreanize-matplotlib
