@@ -1,7 +1,17 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import koreanize_matplotlib  # 한글 폰트 및 마이너스 부호 깨짐 방지
+import matplotlib.font_manager as fm
+import os
+
+# 스트림릿 클라우드(Ubuntu) 환경의 나눔고딕 폰트 경로 설정
+font_path = '/usr/share/fonts/truetype/nanum/NanumGothic.ttf'
+if os.path.exists(font_path):
+    font_name = fm.FontProperties(fname=font_path).get_name()
+    plt.rc('font', family=font_name)
+
+# 마이너스 기호가 깨지는 현상 방지
+plt.rc('axes', unicode_minus=False)
 
 # 페이지 기본 설정
 st.set_page_config(page_title="월별 기온 분석", layout="wide")
@@ -10,7 +20,6 @@ st.title("🌡️ 기온 데이터 시각화 대시보드")
 # 1. 데이터 로드 및 전처리 (캐싱 적용)
 @st.cache_data
 def load_data():
-    # 인코딩 자동 처리 (cp949 우선 시도 후 utf-8 시도)
     try:
         df = pd.read_csv("temperature.csv", encoding="cp949")
     except UnicodeDecodeError:
@@ -19,7 +28,7 @@ def load_data():
     # 결측치 제거
     df = df.dropna(subset=["최고기온(℃)", "최저기온(℃)"]).copy()
 
-    # '일시' 컬럼(예: Oct-07)에서 월과 연도 추출
+    # '일시' 컬럼에서 월과 연도 추출
     month_map = {
         "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4,
         "May": 5, "Jun": 6, "Jul": 7, "Aug": 8,
@@ -29,8 +38,7 @@ def load_data():
     df["월"] = split_date.str[0].map(month_map)
     year_2d = split_date.str[1].astype(int)
 
-    # 1907년~1999년과 2000년~2026년 4자리 연도 정확히 복원
-    # 인덱스 1093('Jan-00') 이전은 1900년대, 이후는 2000년대 데이터
+    # 4자리 연도 복원 로직
     years = []
     century = 1900
     prev_y = -1
@@ -88,7 +96,7 @@ ax.grid(True, linestyle="--", alpha=0.5)
 # 스트림릿 화면에 그래프 출력
 st.pyplot(fig)
 
-# 선택된 월의 원본 데이터 표 함께 제공 (선택 사항)
+# 선택된 월의 원본 데이터 표 제공
 with st.expander(f"{selected_month}월 기온 데이터 상세 보기"):
     st.dataframe(
         filtered_df[["연도", "일시", "평균기온(℃)", "최고기온(℃)", "최저기온(℃)"]].reset_index(drop=True),
