@@ -4,18 +4,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.svm import SVR
 
 # Streamlit Cloud (Linux) 환경에서 한글 폰트(나눔고딕) 설정
 plt.rc("font", family="NanumGothic")
 plt.rcParams["axes.unicode_minus"] = False  # 마이너스(-) 기호 깨짐 방지
 
 # 페이지 기본 설정
-st.set_page_config(page_title="기온 예측 선형회귀 시각화", page_icon="🌡️", layout="wide")
+st.set_page_config(page_title="멀티 알고리즘 기온 예측 비교", page_icon="🌡️", layout="wide")
 
-st.title("🌡️ 월별 평균기온 추이 및 미래 기온 예측")
-st.markdown("과거 기온 데이터를 바탕으로 **선형회귀(Linear Regression)** 알고리즘이 어떻게 미래의 기온을 예측하는지 확인해 보세요.")
+st.title("🌡️ 멀티 머신러닝 알고리즘 기반 월별 기온 예측 및 비교")
+st.markdown("과거 기온 데이터를 여러 가지 예측 알고리즘(**선형회귀, 랜덤 포레스트, SVR**)으로 학습시키고 예측 결과를 비교해보세요.")
 
-# 1. 데이터 로드 및 전처리 (캐싱을 통해 속도 향상)
+# 1. 데이터 로드 및 전처리
 @st.cache_data
 def load_data():
     try:
@@ -23,7 +25,7 @@ def load_data():
     except UnicodeDecodeError:
         df = pd.read_csv("temperature.csv", encoding="utf-8")
 
-    # 결측치(데이터가 없는 시기) 제거
+    # 결측치 제거
     df = df.dropna(subset=["평균기온(℃)"]).copy()
 
     # 'Oct-07' 형태의 문자열에서 월(Month)과 연도(Year) 분리
@@ -35,7 +37,7 @@ def load_data():
     df["월"] = split_date[0].map(month_map)
     yy = split_date[1].astype(int)
 
-    # 2자리 연도 변환 (1907년~2026년 기준: 00~26은 2000년대, 27~99는 1900년대)
+    # 2자리 연도 변환 (1907년~2026년 기준)
     df["연도"] = np.where(yy <= 26, 2000 + yy, 1900 + yy)
     return df
 
@@ -45,7 +47,7 @@ except FileNotFoundError:
     st.error("🚨 같은 폴더에 `temperature.csv` 파일이 있는지 확인해주세요!")
     st.stop()
 
-# 2. 사이드바: 사용자 입력 (월 및 예측 연도)
+# 2. 사이드바: 사용자 입력 (월, 예측 연도, 알고리즘 선택)
 st.sidebar.header("⚙️ 예측 조건 설정")
 selected_month = st.sidebar.selectbox(
     "분석할 월(Month)을 선택하세요:",
@@ -63,88 +65,95 @@ target_year = st.sidebar.number_input(
     step=1
 )
 
-# 3. 선택한 월 데이터 필터링 및 선형회귀 모델 학습
+model_choice = st.sidebar.selectbox(
+    "사용할 알고리즘을 선택하세요:",
+    options=["전체 비교 (3개 모델 동시 비교)", "선형회귀 (Linear Regression)", "랜덤 포레스트 (Random Forest)", "서포트 벡터 머신 (SVR)"]
+)
+
+# 3. 선택한 월 데이터 필터링 및 모델 학습 딕셔너리 구성
 month_df = df[df["월"] == selected_month].sort_values("연도")
+X = month_df[["연도"]].values
+y = month_df["평균기온(℃)"].values
 
-X = month_df[["연도"]].values  # 독립변수 (연도)
-y = month_df["평균기온(℃)"].values  # 종속변수 (평균기온)
+# 세 가지 모델 정의
+models = {
+    "선형회귀": LinearRegression(),
+    "랜덤 포레스트": RandomForestRegressor(n_estimators=100, random_state=42),
+    "SVR": SVR(kernel='rbf', C=1e3, gamma=0.1)
+}
 
-model = LinearRegression()
-model.fit(X, y)
+# 모델 학습 및 예측값 수집
+results = {}
+for name, model in models.items():
+    model.fit(X, y)
+    pred = model.predict([[target_year]])[0]
+    results[name] = {"model": model, "prediction": pred}
 
-# 예측값 계산
-predicted_temp = model.predict([[target_year]])[0]
-recent_avg = month_df.tail(10)["평균기온(℃)"].mean()
-diff_temp = predicted_temp - recent_avg
+# 4. 상단 결과 요약 (선택한 모드에 맞게 출력)
+st.subheader(f"📊 {target_year}년 {selected_month}월 기온 예측 결과 비교")
 
-# 4. 상단 핵심 결과 요약 카드
 col1, col2, col3 = st.columns(3)
-col1.metric(
-    label=f"🔮 {target_year}년 {selected_month}월 예측 평균기온",
-    value=f"{predicted_temp:.2f} ℃",
-    delta=f"최근 10년 평균 대비 {diff_temp:+.2f} ℃"
-)
-col2.metric(
-    label="📈 연평균 기온 상승 기울기",
-    value=f"{model.coef_[0]:+.4f} ℃/년",
-    delta=f"100년당 {model.coef_[0]*100:+.2f} ℃ 변화"
-)
-col3.metric(
-    label="📊 학습에 사용된 데이터 수",
-    value=f"{len(month_df)}년 치",
-    delta=f"{int(month_df['연도'].min())}년 ~ {int(month_df['연도'].max())}년"
-)
 
-# 5. 선형회귀 작동 원리 시각화 그래프
-st.subheader(f"📈 {selected_month}월 평균기온 변화 및 선형회귀 예측 그래프")
+with col1:
+    lr_pred = results["선형회귀"]["prediction"]
+    st.metric(label="📈 선형회귀 예측", value=f"{lr_pred:.2f} ℃", delta=f"기울기: {results['선형회귀']['model'].coef_[0]:+.3f}℃/년")
+
+with col2:
+    rf_pred = results["랜덤 포레스트"]["prediction"]
+    recent_avg = month_df.tail(10)["평균기온(℃)"].mean()
+    st.metric(label="🌳 랜덤 포레스트 예측", value=f"{rf_pred:.2f} ℃", delta=f"최근 10년 평균 대비 {rf_pred - recent_avg:+.2f}℃")
+
+with col3:
+    svr_pred = results["SVR"]["prediction"]
+    st.metric(label="📉 SVR (서포트 벡터) 예측", value=f"{svr_pred:.2f} ℃", delta=f"과거 데이터 패턴 반영")
+
+# 5. 시각화 그래프 영역
+st.subheader(f"📈 역대 {selected_month}월 평균기온 및 알고리즘별 예측 비교 그래프")
 
 fig, ax = plt.subplots(figsize=(12, 6))
 
-# (1) 실제 과거 기온 데이터 (산점도 & 연한 연결선)
-ax.plot(month_df["연도"], y, color="#8ecae6", alpha=0.5, linewidth=1)
-ax.scatter(month_df["연도"], y, color="#219ebc", label="과거 실제 평균기온 (데이터 점)", alpha=0.8, s=35)
+# (1) 실제 과거 기온 데이터 점
+ax.plot(month_df["연도"], y, color="#bde0fe", alpha=0.6, linewidth=1)
+ax.scatter(month_df["연도"], y, color="#3a86ff", label="과거 실제 평균기온", alpha=0.8, s=40)
 
-# (2) 학습 구간 추세선 (과거 ~ 현재)
-ax.plot(month_df["연도"], model.predict(X), color="#fb8500", linewidth=2.5, label="선형회귀 추세선 (데이터를 가장 잘 관통하는 직선)")
-
-# (3) 미래 예측 연장선 (현재 ~ 예측 연도)
+# 선택된 모드에 따른 그래프 라인 드로잉
 future_years = np.linspace(max_year, target_year, 50).reshape(-1, 1)
-ax.plot(future_years, model.predict(future_years), color="#e63946", linestyle="--", linewidth=2.5, label="미래 기온 예측 연장선")
 
-# (4) 예측 지점 강조 및 가이드라인 (직선이 좌표를 찾아가는 원리 표현)
-ax.scatter([target_year], [predicted_temp], color="#e63946", s=180, zorder=5, edgecolors="black", label=f"{target_year}년 예측 결과 ({predicted_temp:.2f}℃)")
-ax.vlines(x=target_year, ymin=y.min() - 1, ymax=predicted_temp, color="gray", linestyle=":", alpha=0.8)
-ax.hlines(y=predicted_temp, xmin=month_df["연도"].min(), xmax=target_year, color="gray", linestyle=":", alpha=0.8)
+if model_choice == "전체 비교 (3个 모델 동시 비교)" or model_choice == "선형회귀 (Linear Regression)":
+    ax.plot(month_df["연도"], results["선형회귀"]["model"].predict(X), color="#fb8500", linewidth=2, label="선형회귀 추세선")
+    ax.scatter([target_year], [lr_pred], color="#fb8500", s=140, zorder=5, marker="o", edgecodes="black")
 
-# 예측 값 말풍선 표시
-ax.annotate(
-    f"  {target_year}년 예측: {predicted_temp:.2f}℃",
-    xy=(target_year, predicted_temp),
-    xytext=(target_year - (target_year - month_df["연도"].min()) * 0.18, predicted_temp + 0.6),
-    fontsize=11,
-    fontweight="bold",
-    color="#d62828",
-    arrowprops=dict(arrowstyle="->", color="#d62828", lw=1.5)
-)
+if model_choice == "전체 비교 (3个 모델 동시 비교)" or model_choice == "랜덤 포레스트 (Random Forest)":
+    # 랜덤 포레스트는 부드러운 곡선 형태로 연장선 시각화
+    rf_curve_years = np.linspace(month_df["연도"].min(), target_year, 100).reshape(-1, 1)
+    ax.plot(rf_curve_years, results["랜덤 포레스트"]["model"].predict(rf_curve_years), color="#38b000", linewidth=2, linestyle="-.", label="랜덤 포레스트 예측 곡선")
+    ax.scatter([target_year], [rf_pred], color="#38b000", s=140, zorder=5, marker="^", edgecodes="black")
 
-ax.set_title(f"역대 {selected_month}월 평균기온과 {target_year}년 선형회귀 예측", fontsize=15, fontweight="bold", pad=15)
+if model_choice == "전체 비교 (3个 모델 동시 비교)" or model_choice == "서포트 벡터 머신 (SVR)":
+    svr_curve_years = np.linspace(month_df["연도"].min(), target_year, 100).reshape(-1, 1)
+    ax.plot(svr_curve_years, results["SVR"]["model"].predict(svr_curve_years), color="#7209b7", linewidth=2, linestyle=":", label="SVR(비선형) 추세선")
+    ax.scatter([target_year], [svr_pred], color="#7209b7", s=140, zorder=5, marker="s", edgecodes="black")
+
+ax.set_title(f"{target_year}년 {selected_month}월 기온 알고리즘별 예측 비교", fontsize=15, fontweight="bold", pad=15)
 ax.set_xlabel("연도 (Year)", fontsize=12)
 ax.set_ylabel("평균기온 (℃)", fontsize=12)
-ax.set_ylim(y.min() - 1, max(y.max(), predicted_temp) + 1.5)
 ax.grid(True, linestyle="--", alpha=0.4)
 ax.legend(loc="upper left", fontsize=10, frameon=True, shadow=True)
 
 st.pyplot(fig)
 
-# 6. 그래프 하단: 선형회귀 알고리즘 쉬운 설명
+# 6. 그래프 하단: 알고리즘 쉬운 설명
 st.divider()
-st.subheader("💡 그래프 속 '선형회귀 알고리즘'은 어떻게 작동할까요?")
+st.subheader("💡 사용된 3가지 머신러닝 알고리즘의 작동 원리")
 
-st.info(f"""
-**선형회귀(Linear Regression)**는 한마디로 **"과거의 점들 사이를 가장 잘 가로지르는 하나의 직선(추세선)을 그어서 미래를 예측하는 방법"**입니다.
-
-1. **파란색 점 (과거 데이터):** 역대 {selected_month}월의 실제 평균기온들입니다. 해마다 춥기도 하고 덥기도 해서 점들이 위아래로 흩어져 있습니다.
-2. **주황색 실선 (가장 이상적인 직선 찾기):** 컴퓨터는 모든 파란색 점들과 직선 사이의 거리(오차)가 **가장 작아지는 단 하나의 직선**을 수학적으로 계산해 긋습니다. 
-   * 현재 데이터에서 이 직선의 공식은 **`예측 기온 = ({model.coef_[0]:.4f} × 연도) + ({model.intercept_:.2f})`** 입니다.
-3. **빨간색 점선과 점 (미래 예측하기):** 찾아낸 주황색 직선의 각도(기울기)를 그대로 유지한 채 **{target_year}년**까지 쭉 연장합니다. 회색 점선을 따라가 보면 **{target_year}년**과 만나는 지점의 기온이 바로 **{predicted_temp:.2f}℃**가 됩니다!
+st.markdown("""
+1. 📈 **선형회귀 (Linear Regression)**
+   * **원리:** 과거의 모든 데이터 점들을 가장 잘 관통하는 **하나의 반듯한 직선**을 긋는 방식입니다.
+   * **특징:** 기온이 장기적으로 일정한 비율로 꾸준히 오르거나 내릴 때 직관적이고 강력합니다.
+2. 🌳 **랜덤 포레스트 (Random Forest)**
+   * **원리:** 여러 개의 '의사결정 나무(Decision Tree)'를 수많이 만들어, 이 나무들이 내린 예측 결과들을 **다수결(평균)**로 모아 최종 결론을 내는 앙상블 방식입니다.
+   * **특징:** 데이터의 급격한 변동이나 복잡한 비선형 패턴을 유연하게 포착합니다.
+3. 📉 **서포트 벡터 머신 (SVR - Support Vector Regression)**
+   * **원리:** 데이터들 사이에서 허용 가능한 오차 범위(마진) 안쪽을 지나가는 **가장 유연한 곡선/직선**을 찾아내는 방식입니다.
+   * **특징:** 데이터의 특정한 경향과 미세한 패턴을 정교하게 반영하여 예측합니다.
 """)
