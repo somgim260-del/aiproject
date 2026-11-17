@@ -2,8 +2,12 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import koreanize_matplotlib  # Streamlit Cloud에서 한글 폰트 깨짐 방지
+import matplotlib.font_manager as fm
 from sklearn.linear_model import LinearRegression
+
+# Streamlit Cloud (Linux) 환경에서 한글 폰트(나눔고딕) 설정
+plt.rc("font", family="NanumGothic")
+plt.rcParams["axes.unicode_minus"] = False  # 마이너스(-) 기호 깨짐 방지
 
 # 페이지 기본 설정
 st.set_page_config(page_title="기온 예측 선형회귀 시각화", page_icon="🌡️", layout="wide")
@@ -14,13 +18,12 @@ st.markdown("과거 기온 데이터를 바탕으로 **선형회귀(Linear Regre
 # 1. 데이터 로드 및 전처리 (캐싱을 통해 속도 향상)
 @st.cache_data
 def load_data():
-    # 기상청 CSV 파일 인코딩(cp949 또는 utf-8) 대응
     try:
         df = pd.read_csv("temperature.csv", encoding="cp949")
     except UnicodeDecodeError:
         df = pd.read_csv("temperature.csv", encoding="utf-8")
 
-    # 결측치(한국전쟁 시기 등 빈 데이터) 제거
+    # 결측치(데이터가 없는 시기) 제거
     df = df.dropna(subset=["평균기온(℃)"]).copy()
 
     # 'Oct-07' 형태의 문자열에서 월(Month)과 연도(Year) 분리
@@ -32,7 +35,7 @@ def load_data():
     df["월"] = split_date[0].map(month_map)
     yy = split_date[1].astype(int)
 
-    # 2자리 연도 변환 (데이터가 1907년~2026년이므로 00~26은 2000년대, 27~99는 1900년대)
+    # 2자리 연도 변환 (1907년~2026년 기준: 00~26은 2000년대, 27~99는 1900년대)
     df["연도"] = np.where(yy <= 26, 2000 + yy, 1900 + yy)
     return df
 
@@ -63,8 +66,8 @@ target_year = st.sidebar.number_input(
 # 3. 선택한 월 데이터 필터링 및 선형회귀 모델 학습
 month_df = df[df["월"] == selected_month].sort_values("연도")
 
-X = month_df[["연도"]].values  # 독립변수 (원인: 연도)
-y = month_df["평균기온(℃)"].values  # 종속변수 (결과: 평균기온)
+X = month_df[["연도"]].values  # 독립변수 (연도)
+y = month_df["평균기온(℃)"].values  # 종속변수 (평균기온)
 
 model = LinearRegression()
 model.fit(X, y)
@@ -113,7 +116,7 @@ ax.scatter([target_year], [predicted_temp], color="#e63946", s=180, zorder=5, ed
 ax.vlines(x=target_year, ymin=y.min() - 1, ymax=predicted_temp, color="gray", linestyle=":", alpha=0.8)
 ax.hlines(y=predicted_temp, xmin=month_df["연도"].min(), xmax=target_year, color="gray", linestyle=":", alpha=0.8)
 
-# 예측 값 텍스트 말풍선 표시
+# 예측 값 말풍선 표시
 ax.annotate(
     f"  {target_year}년 예측: {predicted_temp:.2f}℃",
     xy=(target_year, predicted_temp),
