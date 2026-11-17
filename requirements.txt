@@ -4,8 +4,6 @@ streamlit-folium
 pandas
 plotly
 matplotlib
-streamlit
-pandas
 numpy
 scikit-learn
 koreanize-matplotlib
