@@ -6,4 +6,3 @@ plotly
 matplotlib
 numpy
 scikit-learn
-koreanize-matplotlib
