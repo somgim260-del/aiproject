@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.ensemble import RandomForestClassifier
 import platform
 
@@ -102,25 +101,28 @@ proba_df = pd.DataFrame(
 )
 st.dataframe(proba_df.style.format("{:.1f}%"), use_container_width=True)
 
-# 산점도 시각화 (사용자 입력값: 노란색 별)
+# 5. 산점도 시각화 (Matplotlib 단독 사용, 사용자 입력값: 노란색 별)
 st.divider()
 st.subheader("📊 데이터 분포 및 입력 위치 시각화")
 
 fig, ax = plt.subplots(figsize=(8, 5))
 
-# 기존 데이터 품종별 산점도 그리기
-sns.scatterplot(
-    data=df,
-    x="꽃잎 길이",
-    y="꽃잎 너비",
-    hue="품종",
-    palette="Set2",
-    s=70,
-    alpha=0.8,
-    ax=ax
-)
+# 품종별 색상 및 마커 지정 매핑
+colors = {"Iris-setosa": "#66c2a5", "Iris-versicolor": "#fc8d62", "Iris-virginica": "#8da0cb"}
 
-# 사용자 입력값을 노란색 별(*)로 표시
+# Matplotlib 반복문으로 품종별 산점도 그리기
+for species, group in df.groupby("품종"):
+    ax.scatter(
+        group["꽃잎 길이"],
+        group["꽃잎 너비"],
+        color=colors.get(species, "gray"),
+        label=species,
+        s=70,
+        alpha=0.8,
+        edgecolors="none"
+    )
+
+# 사용자 입력값을 노란색 큰 별(*)로 표시
 ax.scatter(
     petal_length,
     petal_width,
