@@ -11,7 +11,6 @@ import urllib.request
 def setup_font():
     font_path = "NanumGothic.ttf"
     if not os.path.exists(font_path):
-        # 폰트 파일이 없으면 깃허브 등에서 나눔고딕 다운로드
         url = "https://github.com/google/fonts/raw/main/ofl/nanumgothic/NanumGothic-Regular.ttf"
         try:
             urllib.request.urlretrieve(url, font_path)
@@ -22,10 +21,8 @@ def setup_font():
         fm.fontManager.add_font(font_path)
         plt.rc("font", family="NanumGothic")
     else:
-        # 다운로드 실패 시 시스템 기본 폰트 사용
         plt.rc("font", family="sans-serif")
         
-    # 마이너스(-) 기호 깨짐 방지
     plt.rcParams["axes.unicode_minus"] = False
 
 setup_font()
@@ -41,7 +38,6 @@ def load_data():
     except UnicodeDecodeError:
         df = pd.read_csv("Iris.csv", encoding="utf-8")
     
-    # 컬럼명 앞뒤 공백 제거 ('꽃잎 너비 ' -> '꽃잎 너비')
     df.columns = df.columns.str.strip()
     return df
 
@@ -62,4 +58,9 @@ min_len, max_len = float(df["꽃잎 길이"].min()), float(df["꽃잎 길이"].m
 min_wid, max_wid = float(df["꽃잎 너비"].min()), float(df["꽃잎 너비"].max())
 
 # UI 구성
-st.title("🌸 붓꽃(Iris) 품
+st.title("🌸 붓꽃(Iris) 품종 예측 웹 앱")
+st.write("꽃잎의 길이와 너비를 입력하면 **랜덤 포레스트(Random Forest)** 알고리즘으로 붓꽃의 품종을 예측합니다.")
+
+st.divider()
+
+# 입력
