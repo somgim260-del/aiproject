@@ -2,8 +2,24 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import koreanize_matplotlib
 from sklearn.ensemble import RandomForestClassifier
+import platform
+
+# 운영체제별 기본 한글 폰트 설정 (koreanize-matplotlib 대체)
+def set_font():
+    system_name = platform.system()
+    if system_name == "Windows":
+        plt.rc("font", family="Malgun Gothic")
+    elif system_name == "Darwin":  # Mac
+        plt.rc("font", family="AppleGothic")
+    else:  # Linux (Streamlit Cloud 환경)
+        # 리눅스 환경에서 기본 제공되는 Nanum 폰트 등 설정 시도
+        plt.rc("font", family="NanumGothic")
+    
+    # 마이너스(-) 기호 깨짐 방지
+    plt.rcParams["axes.unicode_minus"] = False
+
+set_font()
 
 # 페이지 기본 설정
 st.set_page_config(page_title="붓꽃(Iris) 품종 예측기", page_icon="🌸", layout="centered")
@@ -11,7 +27,6 @@ st.set_page_config(page_title="붓꽃(Iris) 품종 예측기", page_icon="🌸",
 # 1. 데이터 로드 및 전처리 (캐싱으로 속도 최적화)
 @st.cache_data
 def load_data():
-    # 업로드된 Iris.csv가 cp949 인코딩이므로 예외 처리 포함 로드
     try:
         df = pd.read_csv("Iris.csv", encoding="cp949")
     except UnicodeDecodeError:
@@ -50,7 +65,7 @@ st.info(
     f"- **꽃잎 너비 (Petal Width):** `{min_wid} cm` ~ `{max_wid} cm`"
 )
 
-# 2. 사용자 입력 받기 (사이드바 또는 메인 화면)
+# 2. 사용자 입력 받기
 col1, col2 = st.columns(2)
 with col1:
     petal_length = st.number_input(
@@ -88,7 +103,7 @@ proba_df = pd.DataFrame(
 )
 st.dataframe(proba_df.style.format("{:.1f}%"), use_container_width=True)
 
-# 5. 산점도 시각화 (가로축: 꽃잎 길이, 세로축: 꽃잎 너비, 사용자 입력값: 노란색 별)
+# 5. 산점도 시각화 (사용자 입력값: 노란색 별)
 st.divider()
 st.subheader("📊 데이터 분포 및 입력 위치 시각화")
 
