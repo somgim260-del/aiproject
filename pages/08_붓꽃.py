@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.ensemble import RandomForestClassifier
 import platform
 
-# 운영체제별 기본 한글 폰트 설정 (koreanize-matplotlib 대체)
+# 운영체제별 기본 한글 폰트 설정
 def set_font():
     system_name = platform.system()
     if system_name == "Windows":
@@ -13,7 +12,6 @@ def set_font():
     elif system_name == "Darwin":  # Mac
         plt.rc("font", family="AppleGothic")
     else:  # Linux (Streamlit Cloud 환경)
-        # 리눅스 환경에서 기본 제공되는 Nanum 폰트 등 설정 시도
         plt.rc("font", family="NanumGothic")
     
     # 마이너스(-) 기호 깨짐 방지
@@ -24,7 +22,7 @@ set_font()
 # 페이지 기본 설정
 st.set_page_config(page_title="붓꽃(Iris) 품종 예측기", page_icon="🌸", layout="centered")
 
-# 1. 데이터 로드 및 전처리 (캐싱으로 속도 최적화)
+# 1. 데이터 로드 및 전처리 (캐싱 적용)
 @st.cache_data
 def load_data():
     try:
@@ -58,14 +56,14 @@ st.write("꽃잎의 길이와 너비를 입력하면 **랜덤 포레스트(Rando
 
 st.divider()
 
-# 4. 입력 가능한 값의 범위 안내
+# 입력 가능한 값의 범위 안내
 st.subheader("📏 입력 가능 범위 안내")
 st.info(
     f"- **꽃잎 길이 (Petal Length):** `{min_len} cm` ~ `{max_len} cm`\n"
     f"- **꽃잎 너비 (Petal Width):** `{min_wid} cm` ~ `{max_wid} cm`"
 )
 
-# 2. 사용자 입력 받기
+# 사용자 입력 받기
 col1, col2 = st.columns(2)
 with col1:
     petal_length = st.number_input(
@@ -86,7 +84,7 @@ with col2:
         format="%.1f"
     )
 
-# 3. 품종 예측 실행
+# 품종 예측 실행
 input_data = pd.DataFrame([[petal_length, petal_width]], columns=["꽃잎 길이", "꽃잎 너비"])
 prediction = model.predict(input_data)[0]
 prediction_proba = model.predict_proba(input_data)[0]
@@ -103,25 +101,28 @@ proba_df = pd.DataFrame(
 )
 st.dataframe(proba_df.style.format("{:.1f}%"), use_container_width=True)
 
-# 5. 산점도 시각화 (사용자 입력값: 노란색 별)
+# 5. 산점도 시각화 (Matplotlib 단독 사용, 사용자 입력값: 노란색 별)
 st.divider()
 st.subheader("📊 데이터 분포 및 입력 위치 시각화")
 
 fig, ax = plt.subplots(figsize=(8, 5))
 
-# 기존 데이터 품종별 산점도 그리기
-sns.scatterplot(
-    data=df,
-    x="꽃잎 길이",
-    y="꽃잎 너비",
-    hue="품종",
-    palette="Set2",
-    s=70,
-    alpha=0.8,
-    ax=ax
-)
+# 품종별 색상 및 마커 지정 매핑
+colors = {"Iris-setosa": "#66c2a5", "Iris-versicolor": "#fc8d62", "Iris-virginica": "#8da0cb"}
 
-# 사용자 입력값을 노란색 별(*)로 표시
+# Matplotlib 반복문으로 품종별 산점도 그리기
+for species, group in df.groupby("품종"):
+    ax.scatter(
+        group["꽃잎 길이"],
+        group["꽃잎 너비"],
+        color=colors.get(species, "gray"),
+        label=species,
+        s=70,
+        alpha=0.8,
+        edgecolors="none"
+    )
+
+# 사용자 입력값을 노란색 큰 별(*)로 표시
 ax.scatter(
     petal_length,
     petal_width,
