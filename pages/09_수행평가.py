@@ -10,12 +10,12 @@ from sklearn.metrics import accuracy_score
 st.set_page_config(page_title="🐧 펭귄 종 맞추기 마법사", page_icon="🐧", layout="wide")
 
 st.title("🐧 안녕! 나는 펭귄 박사 봇이야! 👋")
-st.markdown("왼쪽 사이드바에서 펭귄의 키와 몸무게 등 신체 치수를 요리조리 조절해봐! 어떤 펭귄인지 척척 맞춰줄게! ✨")
+st.markdown("왼쪽 사이드바에서 펭귄의 신체 치수를 요리조리 조절해봐! 어떤 펭귄인지 척척 맞춰줄게! ✨")
 
 # 1. 데이터 로드 및 모델 학습 (캐싱 적용으로 빠르게 동작!)
 @st.cache_data
 def load_and_train():
-    # 펭귄 데이터를 불러오고 빈칸(결측치) 싹 지우기
+    # 펭귄 데이터를 불러오고 빈칸(결측치) 제거
     df = sns.load_dataset("penguins").dropna()
     
     # 사용할 특징과 정답(종) 분리
@@ -87,7 +87,7 @@ col1, col2 = st.columns([1, 1.4])
 with col1:
     st.subheader("🎯 예측 결과 및 모델 성능")
     
-    # 모델 정확도 뱃지 느낌으로 표시
+    # 모델 정확도 표시
     st.info(f"🤖 AI 모델 정확도(Accuracy): **{accuracy * 100:.2f}%**")
     
     # 예측된 펭귄 종 안내
@@ -123,7 +123,6 @@ with col2:
     y_col = axis_options[y_label]
     
     # Plotly 인터랙티브 산점도 그리기
-    # 기존 펭귄 데이터 산점도
     fig = px.scatter(
         df, 
         x=x_col, 
@@ -151,4 +150,10 @@ with col2:
     
     # 그래프 합치기
     fig.add_trace(fig_user.data[0])
-    fig.update_traces(marker=dict(size=18), selector=dict(mode='markers
+    fig.update_traces(marker=dict(size=18), selector=dict(mode='markers', name='✨ 내 입력값'))
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+# 하단 팁
+st.divider()
+st.caption("💡 팁: 사이드바의 슬라이더 숫자를 조금씩 바꿔가면서 펭귄의 종이 어떻게 바뀌는지 관찰해봐!")
