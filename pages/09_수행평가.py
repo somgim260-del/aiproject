@@ -11,7 +11,6 @@ st.markdown("대한민국 국내 조류 분포 데이터를 바탕으로, 어떤
 # 1. 데이터 로드 함수 (캐싱 적용으로 속도 향상)
 @st.cache_data
 def load_data():
-    # 공공데이터포털 CSV 파일은 인코딩이 'cp949' 또는 'euc-kr'인 경우가 많습니다.
     try:
         df = pd.read_csv("한국과학기술정보연구원_국내 조류분포_20211124.csv", encoding="cp949")
     except UnicodeDecodeError:
@@ -60,9 +59,7 @@ col_a, col_b = st.columns(2)
 
 with col_a:
     st.subheader("🏆 가장 많이 관찰된 조류 Top 10")
-    top_birds = filtered_df.groupby('국명(원병오20000)' if '국명(원병오20000)' in filtered_df.columns else '국명(원병오20000)' not in filtered_df.columns and '국명(원병오2000)'['국명(원병오2000)'].name or '국명(원병오2000)')['관찰개체수'].sum().reset_index()
-    # 상위 10개 정렬
-    top_birds = filtered_df.groupby('국명(원병오20000)' if '국명(원병오20000)' in filtered_df.columns else '국명(원병오2000)')['관찰개체수'].sum().reset_index()
+    top_birds = filtered_df.groupby('국명(원병오2000)')['관찰개체수'].sum().reset_index()
     top_birds = top_birds.sort_values(by='관찰개체수', ascending=False).head(10)
     
     fig_top = px.bar(
